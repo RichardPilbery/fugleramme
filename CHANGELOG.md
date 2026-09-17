@@ -2,6 +2,68 @@
 
 <!-- version list -->
 
+## v0.22.1 (2026-09-17)
+
+### Bug Fixes
+
+- **assets**: Recut the 50 widest classic halos
+  ([`eb2defe`](https://github.com/arnegiacomo/fugleramme/commit/eb2defeb012266cb34dff474d2b443479fb59314))
+
+### Chores
+
+- #60 continue the page's paper around the kiosk
+  ([`780e717`](https://github.com/arnegiacomo/fugleramme/commit/780e717fea8ae3cc7d9d5a3a93dcb0157d7494cb))
+
+- Add Buteo Lineatus and Piranga rubra ([#93](https://github.com/arnegiacomo/fugleramme/pull/93),
+  [`12ac437`](https://github.com/arnegiacomo/fugleramme/commit/12ac437ce1b6bbc0bf71b487c9f48d51be2dd3b5))
+
+- **admin**: Snapshot forms after syncMode so a fresh page is never dirty
+  ([`9c3c798`](https://github.com/arnegiacomo/fugleramme/commit/9c3c798fdaf94895a6c16443437ab408e08d1dbb))
+
+- **assets**: #33 add Dryobates pubescens ([#92](https://github.com/arnegiacomo/fugleramme/pull/92),
+  [`9c31267`](https://github.com/arnegiacomo/fugleramme/commit/9c31267006343f6daa9e5889dd5949f09006c1a6))
+
+- **assets**: #33 Add Pheucticus ludovicianus
+  ([#99](https://github.com/arnegiacomo/fugleramme/pull/99),
+  [`347476f`](https://github.com/arnegiacomo/fugleramme/commit/347476fd298846545ac8876295df7b4e3d860e26))
+
+- **assets**: #33 Add Sialia sialis ([#98](https://github.com/arnegiacomo/fugleramme/pull/98),
+  [`6f800d7`](https://github.com/arnegiacomo/fugleramme/commit/6f800d7d71e0cb03c0b7c09288eafda5c1e6870f))
+
+- **assets**: #33 add thryothorus ludovicianus
+  ([#101](https://github.com/arnegiacomo/fugleramme/pull/101),
+  [`50a710d`](https://github.com/arnegiacomo/fugleramme/commit/50a710d5fb66f7f1687a52b840d56233c73aa536))
+
+- **assets**: Add Anthus hodgsoni ([#95](https://github.com/arnegiacomo/fugleramme/pull/95),
+  [`aa08230`](https://github.com/arnegiacomo/fugleramme/commit/aa08230f2b1ceeb7577aa3b0da9090975e635988))
+
+- **render**: Cloudier paper and halos levelled to the page
+  ([`bd19e6b`](https://github.com/arnegiacomo/fugleramme/commit/bd19e6b0602dea7af3c7c53690767db02681b814))
+
+- **web**: Crossfade between kiosk pages
+  ([`6c8d568`](https://github.com/arnegiacomo/fugleramme/commit/6c8d568e195b5e12e61768fad33e258354ad741b))
+
+- **web**: Say the kiosk needs JavaScript
+  ([`857fd2f`](https://github.com/arnegiacomo/fugleramme/commit/857fd2f555c240911ec0b2e741499f1bf38761bd))
+
+### Documentation
+
+- Add searchable species coverage page
+  ([`120e3b1`](https://github.com/arnegiacomo/fugleramme/commit/120e3b15147d0e0e4d52a84c029385cd4e9c7c0f))
+
+- Count only species in the species badge
+  ([`34d03e9`](https://github.com/arnegiacomo/fugleramme/commit/34d03e999ca8439ffcf11364cf78834c2cbf6a4a))
+
+- Credit Fuse.js in the licence list
+  ([`891f727`](https://github.com/arnegiacomo/fugleramme/commit/891f727c4ac8243fc208e3e31baa5e543169cfc4))
+
+- Fade or round a cut branch instead of a flat cut
+  ([`1423668`](https://github.com/arnegiacomo/fugleramme/commit/1423668dcab119e372c45ea93dc54154d1352a78))
+
+- Fix and feat are a decision to ship a version
+  ([`7ed9f44`](https://github.com/arnegiacomo/fugleramme/commit/7ed9f44e409405ad239c0d820e875c04c1445f02))
+
+
 ## v0.22.0 (2026-09-16)
 
 ### Bug Fixes
