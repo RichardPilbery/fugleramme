@@ -6,7 +6,8 @@
 <title>Fugleramme</title>
 <!-- Inline: one page, no reuse, and no two extra round trips to come up. -->
 <style>
-  html, body { margin: 0; height: 100%; background: #faf9f6; }
+  html, body { margin: 0; height: 100%; }
+  html { background: #f2ede2 url(/paper.png); }
   body { display: flex; align-items: center; justify-content: center; }
   img { max-width: 100%; max-height: 100vh; object-fit: contain; }
   p { font: 1rem/1.5 system-ui, sans-serif; color: #8a8880; text-align: center; }
@@ -23,7 +24,18 @@
   // Only ever seen before the first render: once a page exists the server holds
   // it through an outage, so a blip leaves the birds up rather than a message.
   const show = (page) => { collage.hidden = !page; waiting.hidden = page; };
-  collage.onload = () => show(true);
+  const TILE = 512;  // render/paper.py TILE
+  // Match the page's corner and scale, so its paper runs on past the edge.
+  const fitPaper = () => {
+    if (!collage.naturalHeight || !collage.clientHeight) return;
+    const box = collage.getBoundingClientRect();
+    const root = document.documentElement.style;
+    root.backgroundSize = TILE * box.height / collage.naturalHeight + "px";
+    root.backgroundPosition = box.left + "px " + box.top + "px";
+  };
+  collage.onload = () => { show(true); fitPaper(); };
+  addEventListener("resize", fitPaper);
+  fitPaper();
   collage.onerror = () => show(false);
   let token = null;
   async function tick() {

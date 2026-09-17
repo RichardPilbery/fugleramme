@@ -21,7 +21,9 @@ and the kiosk keeps the picture it is holding.
 
 from __future__ import annotations
 
+import functools
 import hashlib
+import io
 import json
 import logging
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -33,6 +35,7 @@ from .. import __version__, modes, updates
 from ..languages import namer
 from ..panel import Panel, resolution_of
 from ..picks import Picks
+from ..render.paper import paper_tile
 from ..settings import Settings, SettingsStore, merged
 from ..source import Source, Unavailable
 from ..status import Status
@@ -52,6 +55,13 @@ FILES = {
     "/admin.css": ("admin.css", "text/css; charset=utf-8"),
     "/admin.js": ("admin.js", "text/javascript; charset=utf-8"),
 }
+
+
+@functools.cache
+def paper_png() -> bytes:
+    buffer = io.BytesIO()
+    paper_tile().save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 def make_handler(
@@ -197,6 +207,9 @@ def make_handler(
                 JSON,
             )
 
+        def _paper(self):
+            self._send_cached(paper_png(), "image/png")
+
         def _health(self):
             self._send(200, b"ok", "text/plain")
 
@@ -204,6 +217,7 @@ def make_handler(
             "/collage.png": _page_png,
             "/preview.png": _preview_png,
             "/state": _state,
+            "/paper.png": _paper,
             "/species": _species,
             "/admin": _admin,
             "/update": _update,

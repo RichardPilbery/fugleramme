@@ -10,15 +10,20 @@ tunable (a future admin panel can expose them); the source assets are untouched.
 
 from __future__ import annotations
 
+import functools
+
 import numpy as np
 from PIL import Image, ImageFilter
 
 TARGET_PAPER = (242, 237, 226)
 FEATHER = 5  # gaussian blur sigma (px)
 PAD = 16  # transparent margin for the feather to bleed into
+TILE = 512  # px, repeated by kiosk.html too
+GRAIN = 1.4
+MOTTLE = 0.8
 
 
-def _fine_grain(shape, rng, sigma: float = 2.6, blur: float = 0.6) -> np.ndarray:
+def _fine_grain(shape, rng, sigma: float = GRAIN, blur: float = 0.6) -> np.ndarray:
     """Zero-mean high-frequency grain, shared by the page and the halos on it."""
     g = rng.normal(0, sigma, shape)
     return (
@@ -31,26 +36,39 @@ def _fine_grain(shape, rng, sigma: float = 2.6, blur: float = 0.6) -> np.ndarray
     )
 
 
-def paper_texture(width: int, height: int, base=TARGET_PAPER, seed: int = 0) -> Image.Image:
+def _wrapped(noise: np.ndarray, filtered) -> np.ndarray:
+    """Filter `noise` as if tiled, so the result repeats seamlessly."""
+    tiled = Image.fromarray((np.tile(noise, (3, 3)) + 128).clip(0, 255).astype(np.uint8))
+    return np.asarray(filtered(tiled)).astype(np.float32)[TILE : 2 * TILE, TILE : 2 * TILE] - 128
+
+
+@functools.cache
+def _tile(seed: int) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    fine = _wrapped(
+        rng.normal(0, GRAIN, (TILE, TILE)), lambda im: im.filter(ImageFilter.GaussianBlur(0.6))
+    )
+    mottle = _wrapped(
+        rng.normal(0, MOTTLE, (TILE // 16, TILE // 16)),
+        lambda im: im.resize((3 * TILE, 3 * TILE), Image.Resampling.BICUBIC),
+    )
+    tex = np.clip(np.array(TARGET_PAPER)[None, None, :] + (fine + mottle)[..., None], 0, 255)
+    return tex.astype(np.uint8)
+
+
+def paper_tile(seed: int = 0) -> Image.Image:
+    return Image.fromarray(_tile(seed), "RGB")
+
+
+def paper_texture(width: int, height: int, seed: int = 0) -> Image.Image:
     """A subtly textured paper background: fine even grain with a faint mottle.
 
     Kept high-frequency on purpose - a strong low-frequency component reads as
     splotches rather than paper.
     """
-    rng = np.random.default_rng(seed)
-    fine = _fine_grain((height, width), rng)
-    coarse = rng.normal(0, 1.4, (height // 16 + 1, width // 16 + 1))
-    mottle = (
-        np.asarray(
-            Image.fromarray((coarse + 128).clip(0, 255).astype(np.uint8)).resize(
-                (width, height), Image.Resampling.BICUBIC
-            )
-        ).astype(np.float32)
-        - 128
-    )
-    noise = fine + mottle
-    tex = np.clip(np.array(base)[None, None, :] + noise[..., None], 0, 255).astype(np.uint8)
-    return Image.fromarray(tex, "RGB")
+    tile = _tile(seed)
+    reps = (height // TILE + 1, width // TILE + 1, 1)
+    return Image.fromarray(np.tile(tile, reps)[:height, :width], "RGB")
 
 
 def process_sprite(
