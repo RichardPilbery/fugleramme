@@ -14,7 +14,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 from . import fonts
-from .paper import TARGET_PAPER, paper_texture, process_sprite
+from .paper import PAD, TARGET_PAPER, paper_texture, process_sprite
 
 INK = (30, 30, 30)
 PANEL_INK = (0, 0, 0)  # exact palette black: the dither leaves it alone
@@ -89,8 +89,10 @@ def draw_perch(
     if (day // len(perches)) % 2:  # mirrored on the second lap, so it cycles twice as far
         perch = perch.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
     target = int(min(canvas.width, canvas.height) * _PERCH_FILL)
-    proc = process_sprite(fit(perch, (target, target)), textured=textured)
-    canvas.paste(proc, ((canvas.width - proc.width) // 2, (canvas.height - proc.height) // 2), proc)
+    fitted = fit(perch, (target, target))
+    origin = ((canvas.width - fitted.width) // 2 - PAD, (canvas.height - fitted.height) // 2 - PAD)
+    proc = process_sprite(fitted, origin, textured=textured)
+    canvas.paste(proc, origin, proc)
 
 
 def blank(resolution: tuple[int, int], textured: bool) -> Image.Image:

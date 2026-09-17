@@ -19,41 +19,29 @@ TARGET_PAPER = (242, 237, 226)
 FEATHER = 5  # gaussian blur sigma (px)
 PAD = 16  # transparent margin for the feather to bleed into
 TILE = 512  # px, repeated by kiosk.html too
-GRAIN = 1.4
-MOTTLE = 0.8
+STRENGTH = 1.6  # levels
+BETA = 2.0  # higher is cloudier
+LARGEST = 96  # px, largest cloud
+HALO_REACH = 24  # px from the cut
+HALO_BLOCK = 4  # px, resolution of the local tone
+HALO_SMOOTH = 1  # blocks either side
+HALO_SHIFT = 6  # levels, cap
 
 
-def _fine_grain(shape, rng, sigma: float = GRAIN, blur: float = 0.6) -> np.ndarray:
-    """Zero-mean high-frequency grain, shared by the page and the halos on it."""
-    g = rng.normal(0, sigma, shape)
-    return (
-        np.asarray(
-            Image.fromarray((g + 128).clip(0, 255).astype(np.uint8)).filter(
-                ImageFilter.GaussianBlur(blur)
-            )
-        ).astype(np.float32)
-        - 128
-    )
-
-
-def _wrapped(noise: np.ndarray, filtered) -> np.ndarray:
-    """Filter `noise` as if tiled, so the result repeats seamlessly."""
-    tiled = Image.fromarray((np.tile(noise, (3, 3)) + 128).clip(0, 255).astype(np.uint8))
-    return np.asarray(filtered(tiled)).astype(np.float32)[TILE : 2 * TILE, TILE : 2 * TILE] - 128
+@functools.cache
+def _noise(seed: int) -> np.ndarray:
+    # shaped in frequency space, so it wraps and the tile repeats seamlessly
+    rng = np.random.default_rng(seed)
+    freq = np.hypot(*np.meshgrid(np.fft.fftfreq(TILE), np.fft.fftfreq(TILE)))
+    gain = np.maximum(freq, 1 / LARGEST) ** (-BETA / 2)
+    shaped = np.fft.ifft2(np.fft.fft2(rng.normal(size=(TILE, TILE))) * gain).real
+    return np.rint(shaped * (STRENGTH / shaped.std()))
 
 
 @functools.cache
 def _tile(seed: int) -> np.ndarray:
-    rng = np.random.default_rng(seed)
-    fine = _wrapped(
-        rng.normal(0, GRAIN, (TILE, TILE)), lambda im: im.filter(ImageFilter.GaussianBlur(0.6))
-    )
-    mottle = _wrapped(
-        rng.normal(0, MOTTLE, (TILE // 16, TILE // 16)),
-        lambda im: im.resize((3 * TILE, 3 * TILE), Image.Resampling.BICUBIC),
-    )
-    tex = np.clip(np.array(TARGET_PAPER)[None, None, :] + (fine + mottle)[..., None], 0, 255)
-    return tex.astype(np.uint8)
+    tex = np.array(TARGET_PAPER)[None, None, :] + _noise(seed)[..., None]
+    return np.clip(tex, 0, 255).astype(np.uint8)
 
 
 def paper_tile(seed: int = 0) -> Image.Image:
@@ -61,9 +49,9 @@ def paper_tile(seed: int = 0) -> Image.Image:
 
 
 def paper_texture(width: int, height: int, seed: int = 0) -> Image.Image:
-    """A subtly textured paper background: fine even grain with a faint mottle.
+    """A subtly textured paper background: soft clouds over a faint grain.
 
-    Kept high-frequency on purpose - a strong low-frequency component reads as
+    Capped at `LARGEST` on purpose - a strong low-frequency component reads as
     splotches rather than paper.
     """
     tile = _tile(seed)
@@ -71,24 +59,60 @@ def paper_texture(width: int, height: int, seed: int = 0) -> Image.Image:
     return Image.fromarray(np.tile(tile, reps)[:height, :width], "RGB")
 
 
+def _box_sum(a: np.ndarray, r: int) -> np.ndarray:
+    """Sum over a (2r+1)-square window, zero outside the array."""
+    pad = [(r + 1, r), (r + 1, r)] + [(0, 0)] * (a.ndim - 2)
+    c = np.pad(a, pad).cumsum(0).cumsum(1)
+    k = 2 * r + 1
+    return c[k:, k:] - c[:-k, k:] - c[k:, :-k] + c[:-k, :-k]
+
+
+def _local_tone(rgb: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """Local mean of `rgb` over `mask`, at the mask's pixels."""
+    h, w = mask.shape
+    k, r = HALO_BLOCK, HALO_SMOOTH
+
+    def smooth(values: np.ndarray) -> np.ndarray:
+        # whole blocks, so they scale back into place
+        whole = np.pad(values, ((0, -h % k), (0, -w % k)))
+        small = np.asarray(Image.fromarray(whole, "F").reduce(k))
+        summed = _box_sum(_box_sum(small, r), r).astype(np.float32)
+        up = Image.fromarray(summed, "F").resize(whole.shape[::-1], Image.Resampling.BILINEAR)
+        return np.asarray(up)[:h, :w][mask]
+
+    # divide after scaling up, so empty blocks never bleed in
+    weight = smooth(mask.astype(np.float32))
+    sums = np.stack([smooth(rgb[..., c].astype(np.float32) * mask) for c in range(3)], axis=-1)
+    return sums / np.maximum(weight, 1e-3)[:, None]
+
+
+def _reach(seed: np.ndarray, allowed: np.ndarray, steps: int) -> np.ndarray:
+    """Grow `seed` through `allowed`, 4-connected so thin ink stops it."""
+    grown = seed
+    for _ in range(steps):
+        p = np.pad(grown, 1)
+        near = p[1:-1, 1:-1] | p[:-2, 1:-1] | p[2:, 1:-1] | p[1:-1, :-2] | p[1:-1, 2:]
+        grown = seed | (near & allowed)
+    return grown & allowed
+
+
 def process_sprite(
-    sprite: Image.Image, target=TARGET_PAPER, textured: bool = True, seed: int = 0
+    sprite: Image.Image,
+    at: tuple[int, int],
+    target=TARGET_PAPER,
+    textured: bool = True,
+    seed: int = 0,
 ) -> Image.Image:
     """Normalise a scaled RGBA sprite's paper halo to the shared tone and
-    feather its edge. Returns a PAD-padded image; composite it offset by
-    (-PAD, -PAD). When textured, grain the halo to match the page so its edge
-    does not read as an outline; on the flat panel page keep it flat."""
+    feather its edge. Returns a PAD-padded image to paste with its corner at
+    `at`. When textured, the halo takes the page's texture under it so its edge
+    does not read as an outline; on the flat panel page it stays flat."""
     arr = np.asarray(sprite).astype(np.int16)
     alpha, rgb = arr[..., 3], arr[..., :3]
     opaque = alpha > 24
 
     # sample the halo tone from the opaque ring next to the transparent edge
-    near_edge = (
-        np.asarray(
-            Image.fromarray(((~opaque) * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(9))
-        )
-        > 0
-    )
+    near_edge = _box_sum((~opaque).astype(np.int32), 4) > 0
     ring = near_edge & opaque
     paper = np.median(rgb[ring], axis=0) if ring.sum() > 50 else np.array(target)
 
@@ -99,6 +123,12 @@ def process_sprite(
     paper_px = opaque & (dist < 50) & (sat < 55) & (rgb.max(2) > 160)
     out = arr.copy()
     out[paper_px, :3] = np.clip(rgb[paper_px] + delta, 0, 255)
+    # scans shade across the halo: level paper near the cut, outside-in and capped
+    halo = _reach(~opaque, paper_px, HALO_REACH)
+    level = np.clip(
+        np.rint(np.array(target) - _local_tone(out[..., :3], halo)), -HALO_SHIFT, HALO_SHIFT
+    )
+    out[halo, :3] = np.clip(out[halo, :3] + level.astype(np.int16), 0, 255)
     # the outer ring's bright fringe (bg-removal + resize overshoot) survives the
     # median delta and rims the halo; snap it flat to target. Always halo paper.
     out[ring & paper_px, :3] = target
@@ -111,12 +141,13 @@ def process_sprite(
     padded[PAD : PAD + h, PAD : PAD + w] = out
     padded[padded[..., 3] <= 24, :3] = target
 
-    # grain the paper to the page's texture so its edge stops reading as an outline
     if textured:
         paper_mask = padded[..., 3] <= 24
         paper_mask[PAD : PAD + h, PAD : PAD + w] |= paper_px
-        grain = _fine_grain(padded.shape[:2], np.random.default_rng(seed))
-        padded[paper_mask, :3] = np.clip(padded[paper_mask, :3] + grain[paper_mask, None], 0, 255)
+        rows = (np.arange(padded.shape[0]) + at[1]) % TILE
+        cols = (np.arange(padded.shape[1]) + at[0]) % TILE
+        texture = _noise(seed)[np.ix_(rows, cols)].astype(np.int16)
+        padded[paper_mask, :3] = np.clip(padded[paper_mask, :3] + texture[paper_mask, None], 0, 255)
 
     feathered = np.asarray(
         Image.fromarray(padded[..., 3].astype(np.uint8)).filter(ImageFilter.GaussianBlur(FEATHER))

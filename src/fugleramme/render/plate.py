@@ -71,8 +71,9 @@ def render_plate(
     art = fit(trim(art_path), (width - 2 * inset, max(1, height - 2 * inset - caption)))
 
     y = (height - art.height - caption) // 2
-    proc = process_sprite(art, textured=textured)
-    canvas.paste(proc, ((width - art.width) // 2 - PAD, y - PAD), proc)
+    origin = ((width - art.width) // 2 - PAD, y - PAD)
+    proc = process_sprite(art, origin, textured=textured)
+    canvas.paste(proc, origin, proc)
 
     y += art.height
     for mask, gap in lines:

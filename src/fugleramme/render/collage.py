@@ -380,9 +380,10 @@ def render_collage(
 
     for p in placed:
         art = _scaled(arts[p.index], max(1, round(p.dim * scale)), flips[p.index])
-        proc = process_sprite(art, textured=textured)
         at = _at(p.at, scale)
-        canvas.paste(proc, (at[0] - PAD, at[1] - PAD), proc)
+        origin = (at[0] - PAD, at[1] - PAD)
+        proc = process_sprite(art, origin, textured=textured)
+        canvas.paste(proc, origin, proc)
 
     # Names last: halos feather past the collision mask, so a name drawn inline
     # with the birds would be washed over by the next neighbour.

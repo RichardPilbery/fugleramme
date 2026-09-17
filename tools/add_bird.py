@@ -34,7 +34,7 @@ import numpy as np
 from PIL import Image
 
 from fugleramme.names import BIRDS, MANIFEST, SUFFIXES, artwork_in, canonical, manifest, normalize
-from fugleramme.render.paper import paper_texture, process_sprite
+from fugleramme.render.paper import PAD, paper_texture, process_sprite
 
 REPO = Path(__file__).resolve().parents[1]
 ARTWORK = REPO / "assets" / "artwork"
@@ -266,8 +266,9 @@ def preview(img: Image.Image, out: Path, size: int = PREVIEW) -> None:
         Image.Resampling.LANCZOS,
     )
     canvas = paper_texture(size, size)
-    sprite = process_sprite(scaled)  # PAD-padded, so centring it centres the bird
-    canvas.paste(sprite, ((size - sprite.width) // 2, (size - sprite.height) // 2), sprite)
+    origin = ((size - scaled.width) // 2 - PAD, (size - scaled.height) // 2 - PAD)
+    sprite = process_sprite(scaled, origin)
+    canvas.paste(sprite, origin, sprite)
     out.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(out, format="PNG")
 
