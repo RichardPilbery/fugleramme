@@ -29,9 +29,9 @@ HALO_SHIFT = 6  # levels, cap
 
 
 @functools.cache
-def _noise(seed: int) -> np.ndarray:
+def _noise() -> np.ndarray:
     # shaped in frequency space, so it wraps and the tile repeats seamlessly
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(0)
     freq = np.hypot(*np.meshgrid(np.fft.fftfreq(TILE), np.fft.fftfreq(TILE)))
     gain = np.maximum(freq, 1 / LARGEST) ** (-BETA / 2)
     shaped = np.fft.ifft2(np.fft.fft2(rng.normal(size=(TILE, TILE))) * gain).real
@@ -39,22 +39,22 @@ def _noise(seed: int) -> np.ndarray:
 
 
 @functools.cache
-def _tile(seed: int) -> np.ndarray:
-    tex = np.array(TARGET_PAPER)[None, None, :] + _noise(seed)[..., None]
+def _tile() -> np.ndarray:
+    tex = np.array(TARGET_PAPER)[None, None, :] + _noise()[..., None]
     return np.clip(tex, 0, 255).astype(np.uint8)
 
 
-def paper_tile(seed: int = 0) -> Image.Image:
-    return Image.fromarray(_tile(seed), "RGB")
+def paper_tile() -> Image.Image:
+    return Image.fromarray(_tile(), "RGB")
 
 
-def paper_texture(width: int, height: int, seed: int = 0) -> Image.Image:
+def paper_texture(width: int, height: int) -> Image.Image:
     """A subtly textured paper background: soft clouds over a faint grain.
 
     Capped at `LARGEST` on purpose - a strong low-frequency component reads as
     splotches rather than paper.
     """
-    tile = _tile(seed)
+    tile = _tile()
     reps = (height // TILE + 1, width // TILE + 1, 1)
     return Image.fromarray(np.tile(tile, reps)[:height, :width], "RGB")
 
@@ -101,7 +101,6 @@ def process_sprite(
     at: tuple[int, int],
     target=TARGET_PAPER,
     textured: bool = True,
-    seed: int = 0,
 ) -> Image.Image:
     """Normalise a scaled RGBA sprite's paper halo to the shared tone and
     feather its edge. Returns a PAD-padded image to paste with its corner at
@@ -146,7 +145,7 @@ def process_sprite(
         paper_mask[PAD : PAD + h, PAD : PAD + w] |= paper_px
         rows = (np.arange(padded.shape[0]) + at[1]) % TILE
         cols = (np.arange(padded.shape[1]) + at[0]) % TILE
-        texture = _noise(seed)[np.ix_(rows, cols)].astype(np.int16)
+        texture = _noise()[np.ix_(rows, cols)].astype(np.int16)
         padded[paper_mask, :3] = np.clip(padded[paper_mask, :3] + texture[paper_mask, None], 0, 255)
 
     feathered = np.asarray(
