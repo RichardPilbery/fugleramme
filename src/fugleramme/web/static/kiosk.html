@@ -7,19 +7,30 @@
 <!-- Inline: one page, no reuse, and no two extra round trips to come up. -->
 <style>
   html, body { margin: 0; height: 100%; }
-  html { background: #f2ede2 url(/paper.png); }
+  html { background: #f2ede2; }
   body { display: flex; align-items: center; justify-content: center; }
+  /* Tiled right only once the page has a size, so it comes up with the page. */
+  #paper { position: fixed; inset: 0; z-index: -1; background: url(/paper.png); opacity: 0; }
+  #paper.up { opacity: 1; }
+  /* The incoming page, centred by the collage's own rules; never eats a click. */
+  #over { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
   img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+  .fade { animation: in 3s ease-in-out; }
+  @keyframes in { from { opacity: 0; } }
   p { font: 1rem/1.5 system-ui, sans-serif; color: #8a8880; text-align: center; }
   p a { color: inherit; }
 </style>
 </head>
 <body>
-<img id="collage" src="/collage.png" alt="Birds seen recently">
+<div id="paper"></div>
+<img id="collage" src="/collage.png" alt="Birds seen recently" hidden>
 <p id="waiting" hidden>Waiting for BirdNET-Go<br><a href="/admin">Configure it in the admin panel</a></p>
+<div id="over"></div>
 <script>
-  const DELAY = 3000;  // /state is one query, no render
+  const DELAY = 5000;  // /state is one query, no render
   const collage = document.getElementById("collage");
+  const paper = document.getElementById("paper");
+  const over = document.getElementById("over");
   const waiting = document.getElementById("waiting");
   // Only ever seen before the first render: once a page exists the server holds
   // it through an outage, so a blip leaves the birds up rather than a message.
@@ -29,14 +40,32 @@
   const fitPaper = () => {
     if (!collage.naturalHeight || !collage.clientHeight) return;
     const box = collage.getBoundingClientRect();
-    const root = document.documentElement.style;
-    root.backgroundSize = TILE * box.height / collage.naturalHeight + "px";
-    root.backgroundPosition = box.left + "px " + box.top + "px";
+    paper.style.backgroundSize = TILE * box.height / collage.naturalHeight + "px";
+    paper.style.backgroundPosition = box.left + "px " + box.top + "px";
   };
-  collage.onload = () => { show(true); fitPaper(); };
+  const calm = matchMedia("(prefers-reduced-motion: reduce)");
+  // Hidden until it loads, so the first page fades in like an update.
+  collage.onload = () => {
+    const reveal = collage.hidden && !calm.matches;
+    show(true);
+    fitPaper();
+    paper.className = reveal ? "up fade" : "up";
+    if (!reveal) return;
+    collage.className = "fade";
+    collage.onanimationend = () => { paper.className = "up"; collage.className = ""; };
+  };
   addEventListener("resize", fitPaper);
   fitPaper();
   collage.onerror = () => show(false);
+  // Crossfade in place; a new page shape moves the paper too, so that snaps.
+  const swap = (next) => {
+    const reshaped = next.naturalWidth * collage.naturalHeight !== next.naturalHeight * collage.naturalWidth;
+    if (collage.hidden || reshaped || calm.matches) { collage.src = next.src; return; }
+    next.className = "fade";
+    next.alt = "";
+    next.onanimationend = () => { collage.src = next.src; collage.decode().finally(() => next.remove()); };
+    over.append(next);
+  };
   let token = null;
   async function tick() {
     try {
@@ -44,7 +73,7 @@
       if (state.token !== token) {
         token = state.token;
         const next = new Image();  // decode before swapping, so the frame never blanks
-        next.onload = () => { collage.src = next.src; };
+        next.onload = () => swap(next);
         next.src = "/collage.png?v=" + encodeURIComponent(token);
       }
     } catch (e) {}  // transient: retry next tick

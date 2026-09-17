@@ -3,11 +3,21 @@ texture where it lands, and halo levelling stays near the cut and within its cap
 
 from __future__ import annotations
 
+import re
+
 import numpy as np
 from PIL import Image, ImageFilter
 
 from fugleramme.render import paper
 from fugleramme.render.paper import PAD, TARGET_PAPER, TILE, paper_texture, process_sprite
+from fugleramme.web import STATIC_DIR
+
+
+def test_the_kiosk_scales_the_same_tile():
+    """The kiosk sizes its own paper from the tile, so a changed TILE that it did
+    not follow would leave the surround off the page's own grain."""
+    kiosk = (STATIC_DIR / "kiosk.html").read_text()
+    assert re.search(r"const TILE = (\d+)", kiosk)[1] == str(TILE)
 
 
 def test_the_tile_repeats_without_a_seam():
