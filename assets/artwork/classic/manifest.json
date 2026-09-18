@@ -1503,10 +1503,6 @@
     "source": "gould",
     "url": "https://commons.wikimedia.org/wiki/File:GouldBirdsEuropeIIWhite-collared_Flycatcher.jpg"
   },
-  "birds/ficedula-hypoleuca-2.webp": {
-    "source": "vonwright",
-    "url": "https://commons.wikimedia.org/wiki/File:Bird_illustration_from_Svenska_F%C3%A5glar_(Swedish_Birds)_by_the_von_Wright_brothers_from_rawpixel%27s_original_edition_of_the_publication_00061.jpg"
-  },
   "birds/ficedula-hypoleuca-3.webp": {
     "source": "vonwright",
     "url": "https://commons.wikimedia.org/wiki/File:Bird_illustration_from_Svenska_F%C3%A5glar_(Swedish_Birds)_by_the_von_Wright_brothers_from_rawpixel%27s_original_edition_of_the_publication_00215.jpg"
@@ -1655,14 +1651,6 @@
     "source": "vonwright",
     "url": "https://commons.wikimedia.org/wiki/File:Bird_illustration_from_Svenska_F%C3%A5glar_(Swedish_Birds)_by_the_von_Wright_brothers_from_rawpixel%27s_original_edition_of_the_publication_00165.jpg"
   },
-  "birds/gavia-stellata-4.webp": {
-    "source": "vonwright-rawpixel",
-    "url": "https://www.rawpixel.com/image/326259/free-illustration-image-duck-von-wright-brothers-vintage-animal"
-  },
-  "birds/gavia-stellata-5.webp": {
-    "source": "vonwright-rawpixel",
-    "url": "https://www.rawpixel.com/image/326301/free-illustration-image-loon-von-wright-brothers-wright"
-  },
   "birds/gavia-stellata.webp": {
     "source": "gould",
     "url": "https://commons.wikimedia.org/wiki/File:GouldBirdsEuropeVRed-throated_Diver.jpg"
@@ -1752,10 +1740,6 @@
     "url": "https://commons.wikimedia.org/wiki/File:Hippolais_polyglotta_%26_Hippolais_icterina_1849.jpg"
   },
   "birds/hippolais-icterina.webp": {
-    "source": "vonwright",
-    "url": "https://commons.wikimedia.org/wiki/File:Bird_illustration_from_Svenska_F%C3%A5glar_(Swedish_Birds)_by_the_von_Wright_brothers_from_rawpixel%27s_original_edition_of_the_publication_00205.jpg"
-  },
-  "birds/hippolais-olivetorum-2.webp": {
     "source": "vonwright",
     "url": "https://commons.wikimedia.org/wiki/File:Bird_illustration_from_Svenska_F%C3%A5glar_(Swedish_Birds)_by_the_von_Wright_brothers_from_rawpixel%27s_original_edition_of_the_publication_00205.jpg"
   },
