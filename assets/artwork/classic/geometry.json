@@ -8351,6 +8351,18 @@
    791
   ]
  },
+ "birds/nymphicus-hollandicus.webp": {
+  "box": [
+   0.3943769642402105,
+   0.33930909500810746,
+   1.0,
+   1.0
+  ],
+  "cut": [
+   735,
+   1200
+  ]
+ },
  "birds/ocyphaps-lophotes.webp": {
   "box": [
    0.142095,
